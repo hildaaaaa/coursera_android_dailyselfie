@@ -1,6 +1,8 @@
 package android.coursera.dailyselfie;
 
 import android.Manifest;
+import android.app.AlarmManager;
+import android.app.PendingIntent;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.graphics.Bitmap;
@@ -25,15 +27,20 @@ import java.util.Date;
 
 
 public class HomeActivity extends AppCompatActivity {
-    public static final int CAMERA_REQUEST_CODE = 1000;
-    public static final int MY_PERMISSION_CAMERA = 2000;
+    public static final int REQUEST_CODE_CAMERA = 1000;
+    public static final int MY_PERMISSION_CAMERA = 1999;
     public static final int MY_PERMISSION_WRITE_EXTERNAL_DATA = 2999;
+    public static final int REQUEST_CODE_NOTIFICATION = 3000;
+    private static final long TWO_MINUTES = 2*60*1000;
+    private static final long TWENTY_SECONDS = 20*1000;
 
-    File photoDir;
+
+    private File photoDir;
     boolean canPhoto;
     boolean canWritePhoto;
     private SelfieAdapter adapter;
     private Uri photoUri;
+    private AlarmManager alarmManager;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -41,6 +48,26 @@ public class HomeActivity extends AppCompatActivity {
         setContentView(R.layout.activity_home);
         Toolbar toolbar = (Toolbar) findViewById(R.id.toolbar);
         setSupportActionBar(toolbar);
+
+        checkPermissions();
+        photoDir = new File(getExternalFilesDir(Environment.DIRECTORY_PICTURES)
+                + "/selfie");
+
+        new Thread(new Runnable() {
+            @Override
+            public void run() {
+                if (!photoDir.exists()) {
+                    System.err.println("Create directory now");
+                    if (!photoDir.mkdirs()) {
+                        System.err.println("Fail to create directory");
+                    }
+                } else {
+                    System.out.println("photoDir exist");
+                }
+                readPhotoStored();
+            }
+        }).start();
+
         ImageButton cameraButton = (ImageButton) findViewById(R.id.cameraButton);
         cameraButton.setOnClickListener(new View.OnClickListener() {
             @Override
@@ -49,18 +76,7 @@ public class HomeActivity extends AppCompatActivity {
             }
         });
 
-        checkPermissions();
-
-        photoDir = new File(getExternalFilesDir(Environment.DIRECTORY_PICTURES).toString() + "/selfie");
-        if (!photoDir.exists()) {
-            System.err.println("Create directory now");
-            if (!photoDir.mkdirs()) {
-                System.err.println("Fail to create directory");
-            }
-        } else {
-            System.out.println("photoDir exist");
-        }
-        readPhotoStored();
+        System.out.println(photoDir.getAbsolutePath());
 
         final ListView listView = findViewById(R.id.photoListView);
         listView.setOnItemClickListener(new AdapterView.OnItemClickListener() {
@@ -75,7 +91,11 @@ public class HomeActivity extends AppCompatActivity {
                 startActivity(intent);
             }
         });
+
+        alarmManager = (AlarmManager) getSystemService(ALARM_SERVICE);
     }
+
+
 
     protected void readPhotoStored() {
         ArrayList<Selfie> list = new ArrayList<>();
@@ -124,7 +144,7 @@ public class HomeActivity extends AppCompatActivity {
                 photoUri = Uri.fromFile(new File(photoDir,
                         photoFileName));
                 takePictureIntent.putExtra(MediaStore.EXTRA_OUTPUT, photoUri);
-                startActivityForResult(takePictureIntent, CAMERA_REQUEST_CODE);
+                startActivityForResult(takePictureIntent, REQUEST_CODE_CAMERA);
             }
         }
     }
@@ -213,16 +233,17 @@ public class HomeActivity extends AppCompatActivity {
     // Set Selfie attributes
     @Override
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
-        if (requestCode == CAMERA_REQUEST_CODE) {
+        if (requestCode == REQUEST_CODE_CAMERA) {
             if (resultCode == RESULT_OK) {
                 System.out.println("resultCode == OK");
                 File imageFile = new File(photoUri.getPath());
-//                galleryAddPic(imageFile.getAbsolutePath());
+                galleryAddPic(imageFile.getAbsolutePath());
                 if (imageFile.exists()) {
                     Bitmap bitmap = BitmapFactory.decodeFile(imageFile.getAbsolutePath());
                     String selfieName = imageFile.getName();
                     Selfie selfie = new Selfie(bitmap , selfieName, imageFile.getAbsolutePath());
                     adapter.addItem(selfie);
+                    setUpAlarmNotification();
                 } else {
                     System.err.println("No imageFile found");
                 }
@@ -236,8 +257,7 @@ public class HomeActivity extends AppCompatActivity {
     private String createImageFile(Selfie selfie) {
         try {
             // Create an image file name
-            String timeStamp = new SimpleDateFormat("yyyyMMdd_HHmmss").format(new Date());
-            String imageFileName = timeStamp;
+            String imageFileName = new SimpleDateFormat("yyyyMMdd_HHmmss").format(new Date());
             File image = new File(photoDir, imageFileName);
             image.createNewFile();
             // Save a file: path for use with ACTION_VIEW intents
@@ -258,4 +278,19 @@ public class HomeActivity extends AppCompatActivity {
         this.sendBroadcast(mediaScanIntent);
     }
 
+    private void setUpAlarmNotification(){
+
+        Intent alarmNotificationIntent = new Intent(
+                this, AlarmNotificationReceiver.class);
+
+        PendingIntent pendingIntent = PendingIntent.getBroadcast(
+                this, REQUEST_CODE_NOTIFICATION, alarmNotificationIntent, 0);
+
+        alarmManager.set(
+                AlarmManager.RTC_WAKEUP,
+                System.currentTimeMillis() + TWENTY_SECONDS,
+                pendingIntent
+                );
+        System.out.println("Set up alarm");
+    }
 }

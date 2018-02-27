@@ -3,11 +3,14 @@
     package="android.coursera.dailyselfie">
 
     <uses-permission android:name="android.permission.CAMERA" />
+
+    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE"/>
+
     <uses-permission
         android:name="android.permission.WRITE_EXTERNAL_STORAGE"
         android:required="true" />
 
-    <uses-feature android:name="android.hardware.camera.autofocus" />
+    <!--<uses-feature android:name="android.hardware.camera.autofocus" />-->
     <uses-feature
         android:name="android.hardware.camera"
         android:required="true" />
@@ -30,6 +33,11 @@
             </intent-filter>
         </activity>
         <activity android:name=".ViewPhotoActivity"></activity>
+
+        <receiver
+            android:name="android.coursera.dailyselfie.AlarmNotificationReceiver"
+            android:exported="false" />
+
     </application>
 
 </manifest>

@@ -2,6 +2,7 @@ package android.coursera.dailyselfie;
 
 import android.content.Context;
 import android.graphics.Bitmap;
+import android.graphics.Matrix;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -47,7 +48,7 @@ public class SelfieAdapter extends BaseAdapter {
         if (bitmap == null) {
             System.err.println("bitmap == null");
         } else {
-            Bitmap resized = Bitmap.createScaledBitmap(bitmap, 200,200,true);
+            Bitmap resized = Bitmap.createScaledBitmap(bitmap, 200,300,true);
             imageView.setImageBitmap(resized);
         }
         textView.setText(selfie.getName());
@@ -58,4 +59,5 @@ public class SelfieAdapter extends BaseAdapter {
         selfies.add(selfie);
         notifyDataSetChanged();
     }
+
 }

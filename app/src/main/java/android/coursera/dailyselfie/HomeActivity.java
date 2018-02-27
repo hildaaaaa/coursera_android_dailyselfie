@@ -7,6 +7,9 @@ import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
+import android.graphics.Matrix;
+import android.graphics.drawable.GradientDrawable;
+import android.hardware.Camera;
 import android.net.Uri;
 import android.os.Bundle;
 import android.os.Environment;
@@ -32,9 +35,11 @@ public class HomeActivity extends AppCompatActivity {
     public static final int MY_PERMISSION_WRITE_EXTERNAL_DATA = 2999;
     public static final int REQUEST_CODE_NOTIFICATION = 3000;
     private static final long TWO_MINUTES = 2*60*1000;
-    private static final long TWENTY_SECONDS = 20*1000;
+    private static final long TEN_SECONDS = 10*1000;
 
+    public static boolean active;
 
+    private PendingIntent pendingIntent;
     private File photoDir;
     boolean canPhoto;
     boolean canWritePhoto;
@@ -49,6 +54,7 @@ public class HomeActivity extends AppCompatActivity {
         Toolbar toolbar = (Toolbar) findViewById(R.id.toolbar);
         setSupportActionBar(toolbar);
 
+        active = true;
         checkPermissions();
         photoDir = new File(getExternalFilesDir(Environment.DIRECTORY_PICTURES)
                 + "/selfie");
@@ -95,17 +101,17 @@ public class HomeActivity extends AppCompatActivity {
         alarmManager = (AlarmManager) getSystemService(ALARM_SERVICE);
     }
 
-
-
     protected void readPhotoStored() {
         ArrayList<Selfie> list = new ArrayList<>();
-        ListView listView = (ListView) findViewById(R.id.photoListView);
+        final ListView listView = (ListView) findViewById(R.id.photoListView);
         if (adapter == null) {
             if (photoDir.isDirectory()) {
                 File[] files = photoDir.listFiles();
                 for (File f : files) {
+                    Bitmap bitmap = BitmapFactory.decodeFile(f.getAbsolutePath());
+                    Bitmap rotated = rotate(bitmap);
                     Selfie selfie = new Selfie(
-                            BitmapFactory.decodeFile(f.getAbsolutePath()),
+                            rotated,
                             f.getName(),
                             f.getAbsolutePath()
                     );
@@ -113,10 +119,21 @@ public class HomeActivity extends AppCompatActivity {
                 }
             }
             adapter = new SelfieAdapter(this, list);
-            listView.setAdapter(adapter);
+            runOnUiThread(new Runnable() {
+                @Override
+                public void run() {
+                    listView.setAdapter(adapter);
+                }
+            });
         } else {
             System.out.println("adapter not null");
         }
+    }
+
+    public static Bitmap rotate(Bitmap original){
+        Matrix matrix = new Matrix();
+        matrix.postRotate(90);
+        return Bitmap.createBitmap(original, 0, 0, original.getWidth(), original.getHeight(), matrix, true);
     }
 
     protected void callForPhotoTaking() {
@@ -240,10 +257,11 @@ public class HomeActivity extends AppCompatActivity {
                 galleryAddPic(imageFile.getAbsolutePath());
                 if (imageFile.exists()) {
                     Bitmap bitmap = BitmapFactory.decodeFile(imageFile.getAbsolutePath());
+                    Bitmap rotated = rotate(bitmap);
                     String selfieName = imageFile.getName();
-                    Selfie selfie = new Selfie(bitmap , selfieName, imageFile.getAbsolutePath());
-                    adapter.addItem(selfie);
+                    Selfie selfie = new Selfie(rotated , selfieName, imageFile.getAbsolutePath());
                     setUpAlarmNotification();
+                    adapter.addItem(selfie);
                 } else {
                     System.err.println("No imageFile found");
                 }
@@ -288,9 +306,21 @@ public class HomeActivity extends AppCompatActivity {
 
         alarmManager.set(
                 AlarmManager.RTC_WAKEUP,
-                System.currentTimeMillis() + TWENTY_SECONDS,
+                System.currentTimeMillis() + TEN_SECONDS,
                 pendingIntent
                 );
         System.out.println("Set up alarm");
+    }
+
+    @Override
+    protected void onStop() {
+        active = false;
+        super.onStop();
+    }
+
+    @Override
+    protected void onDestroy() {
+        active = false;
+        super.onDestroy();
     }
 }

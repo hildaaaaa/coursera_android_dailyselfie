@@ -19,6 +19,7 @@ public class ViewPhotoActivity extends AppCompatActivity {
 
         Bundle bundle = getIntent().getExtras();
         String path = bundle.getString("path");
-        imageView.setImageBitmap(BitmapFactory.decodeFile(path));
+
+        imageView.setImageBitmap(HomeActivity.rotate(BitmapFactory.decodeFile(path)));
     }
 }

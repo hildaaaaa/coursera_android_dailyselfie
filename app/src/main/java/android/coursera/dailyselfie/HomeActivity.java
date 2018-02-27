@@ -84,18 +84,18 @@ public class HomeActivity extends AppCompatActivity {
             if (photoDir.isDirectory()) {
                 File[] files = photoDir.listFiles();
                 for (File f : files) {
-                    if (f.getName().substring(f.getName().lastIndexOf(".") + 1) == "jpg") {
-                        Selfie selfie = new Selfie(
-                                BitmapFactory.decodeFile(f.getAbsolutePath()),
-                                f.getName(),
-                                f.getAbsolutePath()
-                        );
-                        list.add(selfie);
-                    }
+                    Selfie selfie = new Selfie(
+                            BitmapFactory.decodeFile(f.getAbsolutePath()),
+                            f.getName(),
+                            f.getAbsolutePath()
+                    );
+                    list.add(selfie);
                 }
             }
             adapter = new SelfieAdapter(this, list);
             listView.setAdapter(adapter);
+        } else {
+            System.out.println("adapter not null");
         }
     }
 
@@ -113,7 +113,6 @@ public class HomeActivity extends AppCompatActivity {
             String photoFileName = null;
             Selfie selfie = new Selfie();
             try {
-
                 photoFileName = createImageFile(selfie);
             } catch (Exception ex) {
                 // Error occurred while creating the File
@@ -122,11 +121,9 @@ public class HomeActivity extends AppCompatActivity {
             }
             // Continue only if the File was successfully created
             if (photoFileName != null) {
-
                 photoUri = Uri.fromFile(new File(photoDir,
-                        String.valueOf(photoFileName) + ".jpg"));
+                        photoFileName));
                 takePictureIntent.putExtra(MediaStore.EXTRA_OUTPUT, photoUri);
-//                takePictureIntent.putExtra("name", photoFileName);
                 startActivityForResult(takePictureIntent, CAMERA_REQUEST_CODE);
             }
         }
@@ -216,26 +213,23 @@ public class HomeActivity extends AppCompatActivity {
     // Set Selfie attributes
     @Override
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
-        if (requestCode == CAMERA_REQUEST_CODE && resultCode == RESULT_OK) {
-            if (data != null) {
-                Bundle extras = data.getExtras();
-                Bitmap imageBitmap = (Bitmap) extras.get("data");
-                Selfie selfie = new Selfie(imageBitmap, (String) extras.get("name"), "");
-                System.out.println("selfie == null : " + selfie==null);
-                System.out.println("name = " + selfie.getName());
-                adapter.addItem(selfie);
-            } else {
+        if (requestCode == CAMERA_REQUEST_CODE) {
+            if (resultCode == RESULT_OK) {
+                System.out.println("resultCode == OK");
                 File imageFile = new File(photoUri.getPath());
-                galleryAddPic(imageFile.getAbsolutePath());
+//                galleryAddPic(imageFile.getAbsolutePath());
                 if (imageFile.exists()) {
                     Bitmap bitmap = BitmapFactory.decodeFile(imageFile.getAbsolutePath());
                     String selfieName = imageFile.getName();
-                    selfieName = selfieName.substring(0, selfieName.lastIndexOf("."));
                     Selfie selfie = new Selfie(bitmap , selfieName, imageFile.getAbsolutePath());
                     adapter.addItem(selfie);
                 } else {
                     System.err.println("No imageFile found");
                 }
+            } else {
+                System.err.println("resultCode != OK");
+                File imageFile = new File(photoUri.getPath());
+                imageFile.delete();
             }
         }
     }
@@ -244,12 +238,8 @@ public class HomeActivity extends AppCompatActivity {
             // Create an image file name
             String timeStamp = new SimpleDateFormat("yyyyMMdd_HHmmss").format(new Date());
             String imageFileName = timeStamp;
-            File image = File.createTempFile(
-                    imageFileName,  /* prefix */
-                    ".jpg",         /* suffix */
-                    photoDir      /* directory */
-            );
-
+            File image = new File(photoDir, imageFileName);
+            image.createNewFile();
             // Save a file: path for use with ACTION_VIEW intents
             selfie.setName(imageFileName);
             selfie.setPath(image.getCanonicalPath());

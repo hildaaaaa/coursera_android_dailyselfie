@@ -1,0 +1,5 @@
+<resources>
+    <string name="app_name">DailySelfie</string>
+    <string name="camera_button">Camera</string>
+    <string name="photo_description">Photo taken</string>
+</resources>

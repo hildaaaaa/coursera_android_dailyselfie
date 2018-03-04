@@ -194,7 +194,6 @@ public class HomeActivity extends AppCompatActivity {
             return false;
         }
     }
-
     protected boolean checkWritePhotoPermission() {
         int permissionCheck = ContextCompat.checkSelfPermission(HomeActivity.this,
                 Manifest.permission.WRITE_EXTERNAL_STORAGE);
